@@ -12,6 +12,8 @@ class Matricula {
     private valorPago: number;
     private formaPagamento: string;
     private statusMatricula: string;
+    private nome: string | undefined;
+    private sobrenome: string | undefined;
 
     constructor(
         _codAluno: number,
@@ -20,7 +22,9 @@ class Matricula {
         _dataVencimento: Date,
         _valorPago: number,
         _formaPagamento: string,
-        _statusMatricula: string
+        _statusMatricula: string,
+        _nome?: string,
+        _sobrenome?: string
     ) {
         this.codAluno = _codAluno;
         this.codPlano = _codPlano;
@@ -29,79 +33,40 @@ class Matricula {
         this.valorPago = _valorPago;
         this.formaPagamento = _formaPagamento;
         this.statusMatricula = _statusMatricula;
-    }
-    public getIdMatricula(): number {
-        return this.idMatricula;
-    }
-
-    public setIdMatricula(idMatricula: number): void {
-        this.idMatricula = idMatricula;
+        this.nome = _nome;
+        this.sobrenome = _sobrenome;
     }
 
-    public getCodAluno(): number {
-        return this.codAluno;
-    }
+    public getIdMatricula(): number { return this.idMatricula; }
+    public setIdMatricula(idMatricula: number): void { this.idMatricula = idMatricula; }
+    public getCodAluno(): number { return this.codAluno; }
+    public setCodAluno(codAluno: number): void { this.codAluno = codAluno; }
+    public getCodPlano(): number { return this.codPlano; }
+    public setCodPlano(codPlano: number): void { this.codPlano = codPlano; }
+    public getDataMatricula(): Date { return this.dataMatricula; }
+    public setDataMatricula(dataMatricula: Date): void { this.dataMatricula = dataMatricula; }
+    public getDataVencimento(): Date { return this.dataVencimento; }
+    public setDataVencimento(dataVencimento: Date): void { this.dataVencimento = dataVencimento; }
+    public getValorPago(): number { return this.valorPago; }
+    public setValorPago(valorPago: number): void { this.valorPago = valorPago; }
+    public getFormaPagamento(): string { return this.formaPagamento; }
+    public setFormaPagamento(formaPagamento: string): void { this.formaPagamento = formaPagamento; }
+    public getStatusMatricula(): string { return this.statusMatricula; }
+    public setStatusMatricula(statusMatricula: string): void { this.statusMatricula = statusMatricula; }
+    public getNome(): string | undefined { return this.nome; }
+    public setNome(nome: string): void { this.nome = nome; }
+    public getSobrenome(): string | undefined { return this.sobrenome; }
+    public setSobrenome(sobrenome: string): void { this.sobrenome = sobrenome; }
 
-    public setCodAluno(codAluno: number): void {
-        this.codAluno = codAluno;
-    }
-
-    public getCodPlano(): number {
-        return this.codPlano;
-    }
-
-    public setCodPlano(codPlano: number): void {
-        this.codPlano = codPlano;
-    }
-
-    public getDataMatricula(): Date {
-        return this.dataMatricula;
-    }
-
-    public setDataMatricula(dataMatricula: Date): void {
-        this.dataMatricula = dataMatricula;
-    }
-
-    public getDataVencimento(): Date {
-        return this.dataVencimento;
-    }
-
-    public setDataVencimento(dataVencimento: Date): void {
-        this.dataVencimento = dataVencimento;
-    }
-
-    public getValorPago(): number {
-        return this.valorPago;
-    }
-
-    public setValorPago(valorPago: number): void {
-        this.valorPago = valorPago;
-    }
-    public getFormaPagamento(): string {
-        return this.formaPagamento;
-    }
-
-    public setFormaPagamento(formaPagamento: string): void {
-        this.formaPagamento = formaPagamento;
-    }
-
-    public getStatusMatricula(): string {
-        return this.statusMatricula;
-    }
-
-    public setStatusMatricula(statusMatricula: string): void {
-        this.statusMatricula = statusMatricula;
-    }
-
+    // INSERT continua na tabela direta
     static async cadastrarMatricula(matricula: MatriculaDTO): Promise<boolean> {
         try {
             const query = `
-            INSERT INTO Matricula 
-            (cod_matricula, id_aluno, id_plano, data_inicio, data_fim, status_matricula, forma_pagamento, valor_final)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id_matricula;
-        `;
-
+                INSERT INTO Matricula 
+                (cod_matricula, id_aluno, id_plano, data_inicio, data_fim, status_matricula, forma_pagamento, valor_final)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                RETURNING id_matricula;
+            `;
             const valores = [
                 matricula.cod_matricula,
                 matricula.id_aluno,
@@ -112,66 +77,55 @@ class Matricula {
                 matricula.forma_pagamento,
                 matricula.valor_final
             ];
-
             const respostaBD = await database.query(query, valores);
-
             return (respostaBD.rowCount ?? 0) > 0;
         } catch (error) {
             console.error(`Erro ao cadastrar matrícula: ${error}`);
             return false;
         }
     }
-    static async listarMatricula(idMatricula: number): Promise<Matricula | null> {
+
+    // listarMatricula por ID agora usa a VIEW
+    static async listarMatricula(idMatricula: number): Promise<any | null> {
         try {
-            const query = `SELECT * FROM Matricula WHERE id_matricula=$1;`;
+            const query = `
+                SELECT * FROM vw_matriculas_detalhadas
+                WHERE id_matricula = $1;
+            `;
             const respostaBD = await database.query(query, [idMatricula]);
-            if (respostaBD.rows.length > 0) {
-
-
-                const matriculaBD = respostaBD.rows[0];
-
-                const matricula = new Matricula(
-                    matriculaBD.id_aluno,
-                    matriculaBD.id_plano,
-                    matriculaBD.data_inicio,
-                    matriculaBD.data_fim,
-                    matriculaBD.valor_final,
-                    matriculaBD.forma_pagamento,
-                    matriculaBD.status_matricula
-                );
-                matricula.setIdMatricula(matriculaBD.id_matricula);
-                return matricula;
-            }
-            return null;
+            return respostaBD.rows[0] || null;
         } catch (error) {
             console.error(`Erro ao listar matrícula. ${error}`);
             return null;
         }
-
     }
-    static async listarMatriculas(): Promise<Array<Matricula> | null> {
+
+    // listarMatriculas agora usa a VIEW
+    static async listarMatriculas(): Promise<any[] | null> {
         try {
-            const query = `SELECT * FROM Matricula;`;
+            const query = `SELECT * FROM vw_matriculas_detalhadas ORDER BY id_matricula;`;
             const respostaBD = await database.query(query);
-            const matriculas: Array<Matricula> = [];
-            respostaBD.rows.forEach((matriculaBD: any) => {
-                const matricula = new Matricula(
-                    matriculaBD.id_aluno,
-                    matriculaBD.id_plano,
-                    matriculaBD.data_inicio,
-                    matriculaBD.data_fim,
-                    matriculaBD.valor_final,
-                    matriculaBD.forma_pagamento,
-                    matriculaBD.status_matricula
-                );
-                matricula.setIdMatricula(matriculaBD.id_matricula);
-                matriculas.push(matricula);
-            });
-            return matriculas;
+            return respostaBD.rows;
         } catch (error) {
             console.error(`Erro ao listar matrículas. ${error}`);
             return null;
         }
     }
+
+    // filtro por status usando a VIEW
+    static async listarMatriculasPorStatus(status: string): Promise<any[] | null> {
+        try {
+            const query = `
+                SELECT * FROM vw_matriculas_detalhadas
+                WHERE status_matricula = $1;
+            `;
+            const respostaBD = await database.query(query, [status]);
+            return respostaBD.rows;
+        } catch (error) {
+            console.error(`Erro ao filtrar matrículas. ${error}`);
+            return null;
+        }
+    }
 }
+
 export default Matricula;
